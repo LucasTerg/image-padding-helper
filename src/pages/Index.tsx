@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import JSZip from "jszip";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Index = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -169,7 +170,10 @@ const Index = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-2">Image Padding Helper</h1>
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-3xl font-bold">Image Padding Helper</h1>
+          <ThemeToggle />
+        </div>
         <p className="text-center text-gray-500 mb-8">
           Automatically add white padding to images smaller than 500px
         </p>
@@ -236,8 +240,8 @@ const Index = () => {
             <h2 className="text-xl font-semibold">Selected Images ({selectedFiles.length})</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="border rounded-lg p-3 bg-white">
-                  <div className="aspect-square bg-gray-100 rounded-md mb-2 flex items-center justify-center overflow-hidden">
+                <div key={index} className="border rounded-lg p-3 bg-white dark:bg-gray-800 sepia:bg-amber-50">
+                  <div className="aspect-square bg-gray-100 dark:bg-gray-700 sepia:bg-amber-100 rounded-md mb-2 flex items-center justify-center overflow-hidden">
                     <img 
                       src={URL.createObjectURL(file)} 
                       alt={file.name}
@@ -246,7 +250,7 @@ const Index = () => {
                     />
                   </div>
                   <p className="text-sm truncate" title={file.name}>{file.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 sepia:text-amber-700">
                     {(file.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
@@ -264,12 +268,25 @@ const Index = () => {
                 const needsPadding = !!processed;
                 
                 return (
-                  <div key={index} className={`border rounded-lg p-4 ${needsPadding ? "bg-blue-50" : "bg-green-50"}`}>
+                  <div 
+                    key={index} 
+                    className={`border rounded-lg p-4 
+                      ${needsPadding ? 
+                        "bg-blue-50 dark:bg-blue-900/30 sepia:bg-amber-100/50" : 
+                        "bg-green-50 dark:bg-green-900/30 sepia:bg-amber-200/50"}`
+                    }
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium truncate" title={original.name}>
                         {original.name}
                       </span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${needsPadding ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                      <span 
+                        className={`text-xs px-2 py-1 rounded-full 
+                          ${needsPadding ? 
+                            "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 sepia:bg-amber-200 sepia:text-amber-800" : 
+                            "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 sepia:bg-amber-300 sepia:text-amber-900"}`
+                        }
+                      >
                         {needsPadding ? "Padded" : "Unchanged"}
                       </span>
                     </div>

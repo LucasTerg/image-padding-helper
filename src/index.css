@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -87,6 +88,45 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .sepia {
+    --background: 35 30% 92%;
+    --foreground: 30 25% 15%;
+
+    --card: 35 30% 92%;
+    --card-foreground: 30 25% 15%;
+
+    --popover: 35 30% 92%;
+    --popover-foreground: 30 25% 15%;
+
+    --primary: 30 25% 25%;
+    --primary-foreground: 35 40% 95%;
+
+    --secondary: 30 20% 85%;
+    --secondary-foreground: 30 25% 25%;
+
+    --muted: 30 20% 85%;
+    --muted-foreground: 30 15% 40%;
+
+    --accent: 30 20% 85%;
+    --accent-foreground: 30 25% 25%;
+
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 35 40% 95%;
+
+    --border: 30 20% 80%;
+    --input: 30 20% 80%;
+    --ring: 30 25% 45%;
+    
+    --sidebar-background: 35 30% 88%;
+    --sidebar-foreground: 30 25% 25%;
+    --sidebar-primary: 25 70% 40%;
+    --sidebar-primary-foreground: 35 40% 95%;
+    --sidebar-accent: 35 15% 80%;
+    --sidebar-accent-foreground: 30 25% 25%;
+    --sidebar-border: 30 15% 75%;
+    --sidebar-ring: 25 70% 50%;
   }
 }
 
