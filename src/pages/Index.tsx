@@ -51,9 +51,9 @@ const Index = () => {
         
         ctx.drawImage(img, x, y, img.width, img.height);
         
-        // Set progressive JPEG for JPG/JPEG files, otherwise use default quality
+        // Set progressive JPEG for JPG/JPEG files with 100% quality, otherwise use default quality
         const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
-        const quality = isJpeg ? 0.85 : undefined; // Use 0.85 quality for JPEGs
+        const quality = isJpeg ? 1.0 : undefined; // Use 100% quality (1.0) for JPEGs
         
         canvas.toBlob((blob) => {
           URL.revokeObjectURL(url);
