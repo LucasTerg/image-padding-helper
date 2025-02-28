@@ -5,11 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import JSZip from "jszip";
 
 const Index = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [processedImages, setProcessedImages] = useState<{ original: File; processed: Blob | null }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isZipping, setIsZipping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,6 +114,50 @@ const Index = () => {
     toast.success("Download started! Images are saved in progressive format for JPG/JPEG files.");
   };
 
+  const downloadAllAsZip = async () => {
+    if (processedImages.length === 0) {
+      toast.error("No processed images to download");
+      return;
+    }
+
+    setIsZipping(true);
+    toast.info("Creating zip file...");
+
+    try {
+      const zip = new JSZip();
+      
+      // Add all processed images to the zip
+      for (const { original, processed } of processedImages) {
+        if (processed) {
+          // Add processed image with original filename
+          zip.file(original.name, processed);
+        } else {
+          // Add original image since it didn't need processing
+          zip.file(original.name, original);
+        }
+      }
+      
+      // Generate the zip file
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      
+      // Create download link and trigger download
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = "processed-images.zip";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      
+      toast.success("Zip file download started!");
+    } catch (error) {
+      console.error("Zip creation error:", error);
+      toast.error("Failed to create zip file");
+    } finally {
+      setIsZipping(false);
+    }
+  };
+
   const clearAll = () => {
     setSelectedFiles([]);
     setProcessedImages([]);
@@ -157,11 +203,20 @@ const Index = () => {
               
               <Button 
                 onClick={downloadProcessedImages} 
-                disabled={processedImages.length === 0 || isProcessing}
+                disabled={processedImages.length === 0 || isProcessing || isZipping}
                 variant="outline"
                 className="flex-1"
               >
                 Download All
+              </Button>
+              
+              <Button 
+                onClick={downloadAllAsZip} 
+                disabled={processedImages.length === 0 || isProcessing || isZipping}
+                variant="outline"
+                className="flex-1"
+              >
+                {isZipping ? "Creating Zip..." : "Download All (.Zip)"}
               </Button>
               
               <Button 
