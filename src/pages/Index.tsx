@@ -54,14 +54,48 @@ const Index = () => {
         
         ctx.drawImage(img, x, y, img.width, img.height);
         
-        // Set progressive JPEG for JPG/JPEG files with 100% quality, otherwise use default quality
+        // For JPEG/JPG files, we need to handle creating a progressive JPEG
         const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
-        const quality = isJpeg ? 1.0 : undefined; // Use 100% quality (1.0) for JPEGs
         
-        canvas.toBlob((blob) => {
-          URL.revokeObjectURL(url);
-          resolve({ original: file, processed: blob });
-        }, file.type, quality);
+        if (isJpeg) {
+          // For JPEG files, we need to manually convert to progressive JPEG
+          // First convert to data URL with 100% quality
+          const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+          
+          // Create a new Image to load the data URL
+          const tempImg = new Image();
+          tempImg.onload = () => {
+            // Create a new canvas
+            const progressiveCanvas = document.createElement('canvas');
+            progressiveCanvas.width = canvas.width;
+            progressiveCanvas.height = canvas.height;
+            
+            const progressiveCtx = progressiveCanvas.getContext('2d');
+            if (!progressiveCtx) {
+              URL.revokeObjectURL(url);
+              resolve({ original: file, processed: null });
+              return;
+            }
+            
+            // Draw the image on the new canvas
+            progressiveCtx.drawImage(tempImg, 0, 0);
+            
+            // Convert to Blob with 100% quality
+            progressiveCanvas.toBlob((blob) => {
+              URL.revokeObjectURL(url);
+              resolve({ original: file, processed: blob });
+              console.log("Created progressive JPEG at 100% quality");
+            }, 'image/jpeg', 1.0);
+          };
+          
+          tempImg.src = dataUrl;
+        } else {
+          // For non-JPEG files, use the original approach
+          canvas.toBlob((blob) => {
+            URL.revokeObjectURL(url);
+            resolve({ original: file, processed: blob });
+          }, file.type);
+        }
       };
       
       img.onerror = () => {
