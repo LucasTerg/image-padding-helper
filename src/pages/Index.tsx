@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import sharp from "sharp";
 
 const Index = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -28,7 +29,7 @@ const Index = () => {
       const img = new Image();
       const url = URL.createObjectURL(file);
       
-      img.onload = () => {
+      img.onload = async () => {
         if (img.width >= 500 && img.height >= 500) {
           URL.revokeObjectURL(url);
           resolve({ original: file, processed: null });
@@ -54,41 +55,47 @@ const Index = () => {
         
         ctx.drawImage(img, x, y, img.width, img.height);
         
-        // For JPEG/JPG files, we need to handle creating a progressive JPEG
+        // For JPEG/JPG files, we need to create a progressive JPEG
         const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
         
         if (isJpeg) {
-          // For JPEG files, we need to manually convert to progressive JPEG
-          // First convert to data URL with 100% quality
-          const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
-          
-          // Create a new Image to load the data URL
-          const tempImg = new Image();
-          tempImg.onload = () => {
-            // Create a new canvas
-            const progressiveCanvas = document.createElement('canvas');
-            progressiveCanvas.width = canvas.width;
-            progressiveCanvas.height = canvas.height;
+          try {
+            // First convert canvas to blob
+            const canvasBlob = await new Promise<Blob | null>((resolve) => {
+              canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 1.0);
+            });
             
-            const progressiveCtx = progressiveCanvas.getContext('2d');
-            if (!progressiveCtx) {
-              URL.revokeObjectURL(url);
-              resolve({ original: file, processed: null });
-              return;
+            if (!canvasBlob) {
+              throw new Error("Failed to create canvas blob");
             }
             
-            // Draw the image on the new canvas
-            progressiveCtx.drawImage(tempImg, 0, 0);
+            // Convert blob to buffer for sharp
+            const arrayBuffer = await canvasBlob.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
             
-            // Convert to Blob with 100% quality
-            progressiveCanvas.toBlob((blob) => {
+            // Use sharp to create progressive JPEG
+            const progressiveJpegBuffer = await sharp(buffer)
+              .jpeg({ 
+                quality: 100, 
+                progressive: true, 
+                optimiseScans: true 
+              })
+              .toBuffer();
+            
+            // Convert buffer back to blob
+            const progressiveBlob = new Blob([progressiveJpegBuffer], { type: 'image/jpeg' });
+            
+            URL.revokeObjectURL(url);
+            console.log("Created progressive JPEG with quality 100, progressive true, optimiseScans true");
+            resolve({ original: file, processed: progressiveBlob });
+          } catch (error) {
+            console.error("Error creating progressive JPEG:", error);
+            // Fallback to regular canvas blob
+            canvas.toBlob((blob) => {
               URL.revokeObjectURL(url);
               resolve({ original: file, processed: blob });
-              console.log("Created progressive JPEG at 100% quality");
             }, 'image/jpeg', 1.0);
-          };
-          
-          tempImg.src = dataUrl;
+          }
         } else {
           // For non-JPEG files, use the original approach
           canvas.toBlob((blob) => {
