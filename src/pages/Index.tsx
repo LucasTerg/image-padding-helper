@@ -53,41 +53,29 @@ const Index = () => {
         
         ctx.drawImage(img, x, y, img.width, img.height);
         
-        // For JPEG/JPG files, we need to create a progressive JPEG
+        // Obsługa obrazów JPEG - próba utworzenia progresywnego JPEG
         const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
         
-        if (isJpeg) {
-          // Create a canvas blob with high quality
-          canvas.toBlob((blob) => {
-            if (!blob) {
-              URL.revokeObjectURL(url);
-              resolve({ original: file, processed: null });
-              return;
-            }
-            
-            // Create a metadata object to signal this is a progressive JPEG
-            // Note: This is just a signal, the browser's rendering engine actually 
-            // determines if it displays progressively
-            const newBlob = new Blob([blob], { 
-              type: 'image/jpeg'
-            });
-            
+        canvas.toBlob((blob) => {
+          if (!blob) {
             URL.revokeObjectURL(url);
-            console.log("Created high-quality JPEG (browser will handle progressive rendering)");
-            resolve({ original: file, processed: newBlob });
-          }, 'image/jpeg', 1.0); // 1.0 = 100% quality
-        } else {
-          // For non-JPEG files, use the original approach
-          canvas.toBlob((blob) => {
-            URL.revokeObjectURL(url);
-            resolve({ original: file, processed: blob });
-          }, file.type);
-        }
+            resolve({ original: file, processed: null });
+            return;
+          }
+          
+          URL.revokeObjectURL(url);
+          
+          if (isJpeg) {
+            console.log("Utworzono JPEG wysokiej jakości (przeglądarka obsłuży ewentualne renderowanie progresywne)");
+          }
+          
+          resolve({ original: file, processed: blob });
+        }, file.type, isJpeg ? 1.0 : 0.95); // 1.0 = 100% jakości dla JPEG
       };
       
       img.onerror = () => {
         URL.revokeObjectURL(url);
-        toast.error(`Could not load image: ${file.name}`);
+        toast.error(`Nie można załadować obrazu: ${file.name}`);
         resolve({ original: file, processed: null });
       };
       
