@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,15 +29,100 @@ const Index = () => {
       const url = URL.createObjectURL(file);
       
       img.onload = () => {
-        if (img.width >= 500 && img.height >= 500) {
+        // Create the source canvas
+        const sourceCanvas = document.createElement("canvas");
+        sourceCanvas.width = img.width;
+        sourceCanvas.height = img.height;
+        const sourceCtx = sourceCanvas.getContext("2d");
+        
+        if (!sourceCtx) {
           URL.revokeObjectURL(url);
           resolve({ original: file, processed: null });
           return;
         }
         
+        // Draw the image to the source canvas
+        sourceCtx.drawImage(img, 0, 0);
+        
+        // Get image data to analyze content boundaries (cropping)
+        const imageData = sourceCtx.getImageData(0, 0, img.width, img.height);
+        const data = imageData.data;
+        
+        // Find the boundaries of non-white pixels
+        let minX = img.width;
+        let minY = img.height;
+        let maxX = 0;
+        let maxY = 0;
+        
+        // Check each pixel (with step of 2 for performance)
+        for (let y = 0; y < img.height; y += 2) {
+          for (let x = 0; x < img.width; x += 2) {
+            const idx = (y * img.width + x) * 4;
+            
+            // Check if pixel is not white (with some tolerance for near-white)
+            // R, G, B values should be less than 245 to be considered non-white
+            if (
+              data[idx] < 245 || 
+              data[idx + 1] < 245 || 
+              data[idx + 2] < 245 || 
+              data[idx + 3] < 250 // Check alpha channel too
+            ) {
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+        }
+        
+        // Add some padding to the cropped area (5px)
+        const padding = 5;
+        minX = Math.max(0, minX - padding);
+        minY = Math.max(0, minY - padding);
+        maxX = Math.min(img.width, maxX + padding);
+        maxY = Math.min(img.height, maxY + padding);
+        
+        // Calculate dimensions after cropping
+        let cropWidth = maxX - minX;
+        let cropHeight = maxY - minY;
+        
+        // If the whole image is white or cropping didn't work correctly
+        if (cropWidth <= 0 || cropHeight <= 0) {
+          cropWidth = img.width;
+          cropHeight = img.height;
+          minX = 0;
+          minY = 0;
+        }
+        
+        // Calculate aspect ratio
+        const aspectRatio = cropWidth / cropHeight;
+        
+        // Apply maximum dimensions (3000px width, 3600px height)
+        let finalWidth = cropWidth;
+        let finalHeight = cropHeight;
+        
+        if (finalWidth > 3000) {
+          finalWidth = 3000;
+          finalHeight = finalWidth / aspectRatio;
+        }
+        
+        if (finalHeight > 3600) {
+          finalHeight = 3600;
+          finalWidth = finalHeight * aspectRatio;
+        }
+        
+        // Round dimensions to integers
+        finalWidth = Math.round(finalWidth);
+        finalHeight = Math.round(finalHeight);
+        
+        // Create destination canvas with required dimensions
+        // If any dimension is less than 500px, ensure it's at least 500px
+        const targetWidth = Math.max(finalWidth, 500);
+        const targetHeight = Math.max(finalHeight, 500);
+        
         const canvas = document.createElement("canvas");
-        canvas.width = Math.max(img.width, 500);
-        canvas.height = Math.max(img.height, 500);
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
         
         const ctx = canvas.getContext("2d");
         if (!ctx) {
@@ -45,15 +131,22 @@ const Index = () => {
           return;
         }
         
+        // Fill with white background
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        const x = (canvas.width - img.width) / 2;
-        const y = (canvas.height - img.height) / 2;
+        // Calculate positioning to center the image
+        const x = (canvas.width - finalWidth) / 2;
+        const y = (canvas.height - finalHeight) / 2;
         
-        ctx.drawImage(img, x, y, img.width, img.height);
+        // Draw the cropped and resized image onto the white canvas
+        ctx.drawImage(
+          sourceCanvas, 
+          minX, minY, cropWidth, cropHeight, // source rectangle
+          x, y, finalWidth, finalHeight       // destination rectangle
+        );
         
-        // Obsługa obrazów JPEG - próba utworzenia progresywnego JPEG
+        // Check if the image is JPEG
         const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
         
         canvas.toBlob((blob) => {
