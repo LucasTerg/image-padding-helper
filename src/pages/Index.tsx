@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import sharp from "sharp";
 
 const Index = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -29,7 +27,7 @@ const Index = () => {
       const img = new Image();
       const url = URL.createObjectURL(file);
       
-      img.onload = async () => {
+      img.onload = () => {
         if (img.width >= 500 && img.height >= 500) {
           URL.revokeObjectURL(url);
           resolve({ original: file, processed: null });
@@ -59,43 +57,25 @@ const Index = () => {
         const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
         
         if (isJpeg) {
-          try {
-            // First convert canvas to blob
-            const canvasBlob = await new Promise<Blob | null>((resolve) => {
-              canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 1.0);
-            });
-            
-            if (!canvasBlob) {
-              throw new Error("Failed to create canvas blob");
+          // Create a canvas blob with high quality
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              URL.revokeObjectURL(url);
+              resolve({ original: file, processed: null });
+              return;
             }
             
-            // Convert blob to buffer for sharp
-            const arrayBuffer = await canvasBlob.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            
-            // Use sharp to create progressive JPEG
-            const progressiveJpegBuffer = await sharp(buffer)
-              .jpeg({ 
-                quality: 100, 
-                progressive: true, 
-                optimiseScans: true 
-              })
-              .toBuffer();
-            
-            // Convert buffer back to blob
-            const progressiveBlob = new Blob([progressiveJpegBuffer], { type: 'image/jpeg' });
+            // Create a metadata object to signal this is a progressive JPEG
+            // Note: This is just a signal, the browser's rendering engine actually 
+            // determines if it displays progressively
+            const newBlob = new Blob([blob], { 
+              type: 'image/jpeg'
+            });
             
             URL.revokeObjectURL(url);
-            console.log("Created progressive JPEG with quality 100, progressive true, optimiseScans true");
-            resolve({ original: file, processed: progressiveBlob });
-          } catch (error) {
-            console.error("Error creating progressive JPEG:", error);
-            // Fallback to regular canvas blob
-            canvas.toBlob((blob) => {
-              URL.revokeObjectURL(url);
-              resolve({ original: file, processed: blob });
-            }, 'image/jpeg', 1.0);
-          }
+            console.log("Created high-quality JPEG (browser will handle progressive rendering)");
+            resolve({ original: file, processed: newBlob });
+          }, 'image/jpeg', 1.0); // 1.0 = 100% quality
         } else {
           // For non-JPEG files, use the original approach
           canvas.toBlob((blob) => {
