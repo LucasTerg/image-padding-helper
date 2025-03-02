@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -107,19 +106,52 @@ const Index = () => {
           return;
         }
         
-        sourceCtx.drawImage(img, 0, 0);
+        let scaledWidth = img.width;
+        let scaledHeight = img.height;
         
-        const imageData = sourceCtx.getImageData(0, 0, img.width, img.height);
+        if (file.size > 3 * 1024 * 1024) {
+          console.log(`Large file detected (${(file.size/1024/1024).toFixed(2)}MB). Will resize longest dimension to 3000px.`);
+          
+          const aspectRatio = img.width / img.height;
+          
+          if (img.width >= img.height) {
+            scaledWidth = 3000;
+            scaledHeight = Math.round(scaledWidth / aspectRatio);
+          } else {
+            scaledHeight = 3000;
+            scaledWidth = Math.round(scaledHeight * aspectRatio);
+          }
+          
+          console.log(`Scaling dimensions: ${img.width}x${img.height} -> ${scaledWidth}x${scaledHeight}`);
+          
+          const scaleCanvas = document.createElement("canvas");
+          scaleCanvas.width = scaledWidth;
+          scaleCanvas.height = scaledHeight;
+          const scaleCtx = scaleCanvas.getContext("2d");
+          
+          if (scaleCtx) {
+            scaleCtx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+            sourceCtx.drawImage(scaleCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, scaledWidth, scaledHeight);
+            sourceCanvas.width = scaledWidth;
+            sourceCanvas.height = scaledHeight;
+          } else {
+            sourceCtx.drawImage(img, 0, 0);
+          }
+        } else {
+          sourceCtx.drawImage(img, 0, 0);
+        }
+        
+        const imageData = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
         const data = imageData.data;
         
-        let minX = img.width;
-        let minY = img.height;
+        let minX = sourceCanvas.width;
+        let minY = sourceCanvas.height;
         let maxX = 0;
         let maxY = 0;
         
-        for (let y = 0; y < img.height; y += 2) {
-          for (let x = 0; x < img.width; x += 2) {
-            const idx = (y * img.width + x) * 4;
+        for (let y = 0; y < sourceCanvas.height; y += 2) {
+          for (let x = 0; x < sourceCanvas.width; x += 2) {
+            const idx = (y * sourceCanvas.width + x) * 4;
             
             if (
               data[idx] < 245 || 
@@ -138,15 +170,15 @@ const Index = () => {
         const padding = 5;
         minX = Math.max(0, minX - padding);
         minY = Math.max(0, minY - padding);
-        maxX = Math.min(img.width, maxX + padding);
-        maxY = Math.min(img.height, maxY + padding);
+        maxX = Math.min(sourceCanvas.width, maxX + padding);
+        maxY = Math.min(sourceCanvas.height, maxY + padding);
         
         let cropWidth = maxX - minX;
         let cropHeight = maxY - minY;
         
         if (cropWidth <= 0 || cropHeight <= 0) {
-          cropWidth = img.width;
-          cropHeight = img.height;
+          cropWidth = sourceCanvas.width;
+          cropHeight = sourceCanvas.height;
           minX = 0;
           minY = 0;
         }
