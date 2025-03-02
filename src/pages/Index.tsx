@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,24 +23,14 @@ const Index = () => {
   const fileNameInputRef = useRef<HTMLInputElement>(null);
   const backgroundRemovalInputRef = useRef<HTMLInputElement>(null);
 
-  // Normalize filename (remove special characters, spaces to hyphens, etc.)
   const normalizeFileName = (name: string): string => {
-    // Replace accented characters with their non-accented equivalents
     const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
-    // Replace spaces with hyphens and convert to lowercase
     let processed = normalized.replace(/\s+/g, "-").toLowerCase();
-    
-    // Replace multiple hyphens with a single one
     processed = processed.replace(/-+/g, "-");
-    
-    // Remove any characters that aren't alphanumeric, hyphens, or dots
     processed = processed.replace(/[^a-z0-9\-\.]/g, "");
-    
     return processed;
   };
 
-  // Handle paste from clipboard for the filename input
   useEffect(() => {
     const handlePaste = () => {
       navigator.clipboard.readText()
@@ -73,7 +62,6 @@ const Index = () => {
       setProcessedImages([]);
       setProgress(0);
       
-      // Extract base name from the first file
       if (filesArray.length > 0 && renameFiles) {
         const firstFileName = filesArray[0].name.split('.')[0];
         const normalized = normalizeFileName(firstFileName);
@@ -91,7 +79,6 @@ const Index = () => {
       setProgress(0);
       setRemoveBackgroundMode(true);
       
-      // Extract base name from the first file
       if (filesArray.length > 0 && renameFiles) {
         const firstFileName = filesArray[0].name.split('.')[0];
         const normalized = normalizeFileName(firstFileName);
@@ -108,7 +95,6 @@ const Index = () => {
       img.onload = () => {
         console.log(`Processing image: ${file.name}, original size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
         
-        // Create the source canvas
         const sourceCanvas = document.createElement("canvas");
         sourceCanvas.width = img.width;
         sourceCanvas.height = img.height;
@@ -120,31 +106,25 @@ const Index = () => {
           return;
         }
         
-        // Draw the image to the source canvas
         sourceCtx.drawImage(img, 0, 0);
         
-        // Get image data to analyze content boundaries (cropping)
         const imageData = sourceCtx.getImageData(0, 0, img.width, img.height);
         const data = imageData.data;
         
-        // Find the boundaries of non-white pixels
         let minX = img.width;
         let minY = img.height;
         let maxX = 0;
         let maxY = 0;
         
-        // Check each pixel (with step of 2 for performance)
         for (let y = 0; y < img.height; y += 2) {
           for (let x = 0; x < img.width; x += 2) {
             const idx = (y * img.width + x) * 4;
             
-            // Check if pixel is not white (with some tolerance for near-white)
-            // R, G, B values should be less than 245 to be considered non-white
             if (
               data[idx] < 245 || 
               data[idx + 1] < 245 || 
               data[idx + 2] < 245 || 
-              data[idx + 3] < 250 // Check alpha channel too
+              data[idx + 3] < 250
             ) {
               minX = Math.min(minX, x);
               minY = Math.min(minY, y);
@@ -154,18 +134,15 @@ const Index = () => {
           }
         }
         
-        // Add some padding to the cropped area (5px)
         const padding = 5;
         minX = Math.max(0, minX - padding);
         minY = Math.max(0, minY - padding);
         maxX = Math.min(img.width, maxX + padding);
         maxY = Math.min(img.height, maxY + padding);
         
-        // Calculate dimensions after cropping
         let cropWidth = maxX - minX;
         let cropHeight = maxY - minY;
         
-        // If the whole image is white or cropping didn't work correctly
         if (cropWidth <= 0 || cropHeight <= 0) {
           cropWidth = img.width;
           cropHeight = img.height;
@@ -173,10 +150,8 @@ const Index = () => {
           minY = 0;
         }
         
-        // Calculate aspect ratio
         const aspectRatio = cropWidth / cropHeight;
         
-        // Apply maximum dimensions (3000px width, 3600px height)
         let finalWidth = cropWidth;
         let finalHeight = cropHeight;
         
@@ -190,12 +165,9 @@ const Index = () => {
           finalWidth = finalHeight * aspectRatio;
         }
         
-        // Round dimensions to integers
         finalWidth = Math.round(finalWidth);
         finalHeight = Math.round(finalHeight);
         
-        // Create destination canvas with required dimensions
-        // If any dimension is less than 500px, ensure it's at least 500px
         const targetWidth = Math.max(finalWidth, 500);
         const targetHeight = Math.max(finalHeight, 500);
         
@@ -210,25 +182,20 @@ const Index = () => {
           return;
         }
         
-        // Fill with white background
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Calculate positioning to center the image
         const x = (canvas.width - finalWidth) / 2;
         const y = (canvas.height - finalHeight) / 2;
         
-        // Draw the cropped and resized image onto the white canvas
         ctx.drawImage(
           sourceCanvas, 
-          minX, minY, cropWidth, cropHeight, // source rectangle
-          x, y, finalWidth, finalHeight       // destination rectangle
+          minX, minY, cropWidth, cropHeight,
+          x, y, finalWidth, finalHeight
         );
         
-        // Check if the image is JPEG
         const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
         
-        // Initial quality setting
         let quality = isJpeg ? 1.0 : 0.95;
         let attempts = 0;
         const maxAttempts = 10;
@@ -241,10 +208,8 @@ const Index = () => {
               return;
             }
             
-            // Check if size is under 3MB limit
             if (blob.size > 3 * 1024 * 1024 && attempts < maxAttempts) {
               attempts++;
-              // Reduce quality by 10% for each attempt
               const newQuality = q * 0.9;
               console.log(`Image too large (${(blob.size/1024/1024).toFixed(2)}MB), reducing quality to ${(newQuality*100).toFixed(0)}%`);
               compressAndFinalize(newQuality);
@@ -264,7 +229,6 @@ const Index = () => {
           }, file.type, quality);
         };
         
-        // Start the compression process
         compressAndFinalize(quality);
       };
       
@@ -286,7 +250,6 @@ const Index = () => {
       img.onload = () => {
         console.log(`Removing background from: ${file.name}`);
         
-        // Create canvas
         const canvas = document.createElement("canvas");
         canvas.width = img.width;
         canvas.height = img.height;
@@ -298,17 +261,12 @@ const Index = () => {
           return;
         }
         
-        // Draw the original image
         ctx.drawImage(img, 0, 0);
         
-        // Get image data
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         
-        // Simple gray background removal (replace gray with white)
-        // This is a placeholder - in a real app you would use an actual background removal API
         for (let i = 0; i < data.length; i += 4) {
-          // Detect grayish colors (where R, G, B are within ~10% of each other)
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
@@ -319,19 +277,14 @@ const Index = () => {
             Math.abs(g - avg) < avg * 0.1 && 
             Math.abs(b - avg) < avg * 0.1;
           
-          // Replace gray with white
           if (isGrayish && avg > 100 && avg < 235) {
-            data[i] = 255;     // R
-            data[i + 1] = 255; // G
-            data[i + 2] = 255; // B
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
           }
         }
         
-        // Put the modified image data back
         ctx.putImageData(imageData, 0, 0);
-        
-        // Check if the image is JPEG
-        const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
         
         canvas.toBlob((blob) => {
           if (!blob) {
@@ -348,7 +301,7 @@ const Index = () => {
             dimensions: { width: canvas.width, height: canvas.height },
             size: blob.size
           });
-        }, file.type, isJpeg ? 1.0 : 0.95); // High quality
+        }, file.type, isJpeg ? 1.0 : 0.95);
       };
       
       img.onerror = () => {
@@ -416,11 +369,9 @@ const Index = () => {
       const link = document.createElement("a");
       link.href = URL.createObjectURL(processed);
       
-      // Handle file naming
       let fileName = original.name;
       if (renameFiles && baseFileName) {
         const ext = original.name.split('.').pop();
-        // Check if the original name had numeric suffix
         const numericSuffix = original.name.match(/\d+(?=\.[^.]+$)/);
         
         if (numericSuffix) {
@@ -456,16 +407,13 @@ const Index = () => {
       const zip = new JSZip();
       const totalFiles = processedImages.length;
       
-      // Add all processed images to the zip
       for (let i = 0; i < processedImages.length; i++) {
         const { original, processed } = processedImages[i];
         
         if (processed) {
-          // Handle file naming
           let fileName = original.name;
           if (renameFiles && baseFileName) {
             const ext = original.name.split('.').pop();
-            // Check if the original name had numeric suffix
             const numericSuffix = original.name.match(/\d+(?=\.[^.]+$)/);
             
             if (numericSuffix) {
@@ -477,31 +425,28 @@ const Index = () => {
             }
           }
           
-          // Add processed image with custom filename
           zip.file(fileName, processed);
         } else {
-          // Add original image since it didn't need processing
           zip.file(original.name, original);
         }
         
-        setProgress(Math.round(((i + 1) / totalFiles) * 50)); // First 50% for adding files
+        setProgress(Math.round(((i + 1) / totalFiles) * 50));
       }
       
-      // Generate the zip file
+      let lastProgress = 50;
+      
       const zipBlob = await zip.generateAsync({ 
         type: "blob",
         compression: "DEFLATE",
-        compressionOptions: { level: 6 },
-        // Update progress as zip gets generated
-        onUpdate: (metadata) => {
-          if (metadata.percent) {
-            const combinedProgress = 50 + Math.round(metadata.percent / 2); // Last 50% for compression
-            setProgress(combinedProgress);
-          }
+        compressionOptions: { level: 6 }
+      }, (metadata) => {
+        if (metadata.percent) {
+          const combinedProgress = 50 + Math.round(metadata.percent / 2);
+          setProgress(combinedProgress);
+          lastProgress = combinedProgress;
         }
       });
       
-      // Create download link and trigger download
       const link = document.createElement("a");
       link.href = URL.createObjectURL(zipBlob);
       link.download = "processed-images.zip";
@@ -517,7 +462,6 @@ const Index = () => {
     } finally {
       setIsZipping(false);
       setProgress(100);
-      // Reset progress after a short delay
       setTimeout(() => setProgress(0), 1000);
     }
   };
@@ -810,7 +754,6 @@ const Index = () => {
                             alt="Processed" 
                             className="max-w-full h-auto"
                             onLoad={(e) => {
-                              // Don't revoke immediately as we need to display the image
                               setTimeout(() => URL.revokeObjectURL((e.target as HTMLImageElement).src), 30000);
                             }}
                           />
