@@ -108,9 +108,11 @@ const Index = () => {
         
         let scaledWidth = img.width;
         let scaledHeight = img.height;
+        let needsResize = false;
         
-        if (file.size > 3 * 1024 * 1024) {
-          console.log(`Large file detected (${(file.size/1024/1024).toFixed(2)}MB). Will resize longest dimension to 3000px.`);
+        if (file.size > 3 * 1024 * 1024 && (img.width > 3000 || img.height > 3000)) {
+          console.log(`Large file detected (${(file.size/1024/1024).toFixed(2)}MB) with large dimensions. Will resize longest dimension to 3000px.`);
+          needsResize = true;
           
           const aspectRatio = img.width / img.height;
           
@@ -229,9 +231,10 @@ const Index = () => {
         
         const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
         
-        let quality = isJpeg ? 1.0 : 0.95;
+        let quality = (file.size > 3 * 1024 * 1024 && !needsResize) ? 0.9 : (isJpeg ? 1.0 : 0.95);
         let attempts = 0;
         const maxAttempts = 10;
+        const targetSize = 2.9 * 1024 * 1024; // Target just under 3MB (2.9MB)
         
         const compressAndFinalize = (q: number) => {
           canvas.toBlob((blob) => {
@@ -241,9 +244,10 @@ const Index = () => {
               return;
             }
             
-            if (blob.size > 3 * 1024 * 1024 && attempts < maxAttempts) {
+            if (file.size > 3 * 1024 * 1024 && blob.size > targetSize && attempts < maxAttempts) {
               attempts++;
-              const newQuality = q * 0.9;
+              const reductionFactor = blob.size > 2 * targetSize ? 0.7 : 0.85;
+              const newQuality = q * reductionFactor;
               console.log(`Image too large (${(blob.size/1024/1024).toFixed(2)}MB), reducing quality to ${(newQuality*100).toFixed(0)}%`);
               compressAndFinalize(newQuality);
               return;
