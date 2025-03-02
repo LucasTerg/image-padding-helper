@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -285,6 +286,8 @@ const Index = () => {
         }
         
         ctx.putImageData(imageData, 0, 0);
+        
+        const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
         
         canvas.toBlob((blob) => {
           if (!blob) {
