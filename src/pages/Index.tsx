@@ -24,8 +24,25 @@ const Index = () => {
   const backgroundRemovalInputRef = useRef<HTMLInputElement>(null);
 
   const normalizeFileName = (name: string): string => {
-    const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    let processed = normalized.replace(/\s+/g, "-").toLowerCase();
+    const polishReplacements = {
+      'ą': 'a', 'Ą': 'A',
+      'ć': 'c', 'Ć': 'C',
+      'ę': 'e', 'Ę': 'E',
+      'ł': 'l', 'Ł': 'L',
+      'ń': 'n', 'Ń': 'N',
+      'ó': 'o', 'Ó': 'O',
+      'ś': 's', 'Ś': 'S',
+      'ż': 'z', 'Ż': 'Z',
+      'ź': 'z', 'Ź': 'Z'
+    };
+    
+    let processed = name;
+    for (const [from, to] of Object.entries(polishReplacements)) {
+      processed = processed.replace(new RegExp(from, 'g'), to);
+    }
+    
+    processed = processed.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    processed = processed.replace(/\s+/g, "-").toLowerCase();
     processed = processed.replace(/-+/g, "-");
     processed = processed.replace(/[^a-z0-9\-\.]/g, "");
     return processed;
@@ -229,12 +246,12 @@ const Index = () => {
           x, y, finalWidth, finalHeight
         );
         
-        const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
+        const isJpeg = true;
         
-        let quality = (file.size > 3 * 1024 * 1024 && !needsResize) ? 0.9 : (isJpeg ? 1.0 : 0.95);
+        let quality = (file.size > 3 * 1024 * 1024 && !needsResize) ? 0.9 : 0.95;
         let attempts = 0;
         const maxAttempts = 10;
-        const targetSize = 2.9 * 1024 * 1024; // Target just under 3MB (2.9MB)
+        const targetSize = 2.9 * 1024 * 1024;
         
         const compressAndFinalize = (q: number) => {
           canvas.toBlob((blob) => {
@@ -263,7 +280,7 @@ const Index = () => {
               dimensions: { width: targetWidth, height: targetHeight },
               size: blob.size
             });
-          }, file.type, quality);
+          }, "image/jpeg", quality);
         };
         
         compressAndFinalize(quality);
@@ -323,7 +340,7 @@ const Index = () => {
         
         ctx.putImageData(imageData, 0, 0);
         
-        const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
+        const isJpeg = true;
         
         canvas.toBlob((blob) => {
           if (!blob) {
@@ -340,7 +357,7 @@ const Index = () => {
             dimensions: { width: canvas.width, height: canvas.height },
             size: blob.size
           });
-        }, file.type, isJpeg ? 1.0 : 0.95);
+        }, "image/jpeg", 0.95);
       };
       
       img.onerror = () => {
@@ -410,16 +427,18 @@ const Index = () => {
       
       let fileName = original.name;
       if (renameFiles && baseFileName) {
-        const ext = original.name.split('.').pop();
         const numericSuffix = original.name.match(/\d+(?=\.[^.]+$)/);
         
         if (numericSuffix) {
-          fileName = `${baseFileName}${numericSuffix[0]}.${ext}`;
+          fileName = `${baseFileName}${numericSuffix[0]}.jpg`;
         } else if (index > 0) {
-          fileName = `${baseFileName}-${index + 1}.${ext}`;
+          fileName = `${baseFileName}-${index + 1}.jpg`;
         } else {
-          fileName = `${baseFileName}.${ext}`;
+          fileName = `${baseFileName}.jpg`;
         }
+      } else {
+        const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
+        fileName = `${nameWithoutExt}.jpg`;
       }
       
       link.download = fileName;
@@ -452,21 +471,24 @@ const Index = () => {
         if (processed) {
           let fileName = original.name;
           if (renameFiles && baseFileName) {
-            const ext = original.name.split('.').pop();
             const numericSuffix = original.name.match(/\d+(?=\.[^.]+$)/);
             
             if (numericSuffix) {
-              fileName = `${baseFileName}${numericSuffix[0]}.${ext}`;
+              fileName = `${baseFileName}${numericSuffix[0]}.jpg`;
             } else if (i > 0) {
-              fileName = `${baseFileName}-${i + 1}.${ext}`;
+              fileName = `${baseFileName}-${i + 1}.jpg`;
             } else {
-              fileName = `${baseFileName}.${ext}`;
+              fileName = `${baseFileName}.jpg`;
             }
+          } else {
+            const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
+            fileName = `${nameWithoutExt}.jpg`;
           }
           
           zip.file(fileName, processed);
         } else {
-          zip.file(original.name, original);
+          const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
+          zip.file(`${nameWithoutExt}.jpg`, original);
         }
         
         setProgress(Math.round(((i + 1) / totalFiles) * 50));
@@ -817,16 +839,18 @@ const Index = () => {
                             let fileName = original.name;
                             
                             if (renameFiles && baseFileName) {
-                              const ext = original.name.split('.').pop();
                               const numericSuffix = original.name.match(/\d+(?=\.[^.]+$)/);
                               
                               if (numericSuffix) {
-                                fileName = `${baseFileName}${numericSuffix[0]}.${ext}`;
+                                fileName = `${baseFileName}${numericSuffix[0]}.jpg`;
                               } else if (index > 0) {
-                                fileName = `${baseFileName}-${index + 1}.${ext}`;
+                                fileName = `${baseFileName}-${index + 1}.jpg`;
                               } else {
-                                fileName = `${baseFileName}.${ext}`;
+                                fileName = `${baseFileName}.jpg`;
                               }
+                            } else {
+                              const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
+                              fileName = `${nameWithoutExt}.jpg`;
                             }
                             
                             link.href = URL.createObjectURL(processed as Blob);
