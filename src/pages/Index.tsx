@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import { removeBackgroundWithAI } from "@/utils/backgroundRemoval";
 
 const Index = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -297,77 +298,31 @@ const Index = () => {
   };
 
   const removeBackground = async (file: File): Promise<{ original: File; processed: Blob | null; dimensions?: { width: number; height: number }; size?: number }> => {
-    return new Promise((resolve) => {
+    try {
+      console.log(`Usuwanie tła przy użyciu AI dla: ${file.name}`);
+      
+      const processedBlob = await removeBackgroundWithAI(file);
+      
       const img = new Image();
-      const url = URL.createObjectURL(file);
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = URL.createObjectURL(processedBlob);
+      });
       
-      img.onload = () => {
-        console.log(`Removing background from: ${file.name}`);
-        
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        
-        if (!ctx) {
-          URL.revokeObjectURL(url);
-          resolve({ original: file, processed: null });
-          return;
-        }
-        
-        ctx.drawImage(img, 0, 0);
-        
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          
-          const avg = (r + g + b) / 3;
-          const isGrayish = 
-            Math.abs(r - avg) < avg * 0.1 && 
-            Math.abs(g - avg) < avg * 0.1 && 
-            Math.abs(b - avg) < avg * 0.1;
-          
-          if (isGrayish && avg > 100 && avg < 235) {
-            data[i] = 255;
-            data[i + 1] = 255;
-            data[i + 2] = 255;
-          }
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
-        
-        const isJpeg = true;
-        
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            URL.revokeObjectURL(url);
-            resolve({ original: file, processed: null });
-            return;
-          }
-          
-          URL.revokeObjectURL(url);
-          
-          resolve({ 
-            original: file, 
-            processed: blob,
-            dimensions: { width: canvas.width, height: canvas.height },
-            size: blob.size
-          });
-        }, "image/jpeg", 0.95);
+      URL.revokeObjectURL(img.src);
+      
+      return {
+        original: file,
+        processed: processedBlob,
+        dimensions: { width: img.width, height: img.height },
+        size: processedBlob.size
       };
-      
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        toast.error(`Cannot load image: ${file.name}`);
-        resolve({ original: file, processed: null });
-      };
-      
-      img.src = url;
-    });
+    } catch (error) {
+      console.error("Błąd podczas usuwania tła:", error);
+      toast.error(`Nie udało się usunąć tła dla ${file.name}: ${error instanceof Error ? error.message : "nieznany błąd"}`);
+      return { original: file, processed: null };
+    }
   };
 
   const processAllImages = async () => {
@@ -458,18 +413,18 @@ const Index = () => {
       URL.revokeObjectURL(link.href);
     });
     
-    toast.success("Download started!");
+    toast.success("Rozpoczęto pobieranie!");
   };
 
   const downloadAllAsZip = async () => {
     if (processedImages.length === 0) {
-      toast.error("No processed images to download");
+      toast.error("Brak przetworzonych obrazów do pobrania");
       return;
     }
 
     setIsZipping(true);
     setProgress(0);
-    toast.info("Creating zip file...");
+    toast.info("Tworzenie pliku zip...");
 
     try {
       const zip = new JSZip();
@@ -549,10 +504,10 @@ const Index = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
       
-      toast.success("Zip file download started!");
+      toast.success("Rozpoczęto pobieranie pliku zip!");
     } catch (error) {
-      console.error("Zip creation error:", error);
-      toast.error("Failed to create zip file");
+      console.error("Błąd tworzenia pliku zip:", error);
+      toast.error("Nie udało się utworzyć pliku zip");
     } finally {
       setIsZipping(false);
       setProgress(100);
