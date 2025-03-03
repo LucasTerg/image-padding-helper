@@ -39,10 +39,20 @@ export const removeBackgroundWithAI = async (file: File): Promise<Blob> => {
     // Ładujemy obraz
     const imageElement = await loadImage(file);
     
-    // Używamy modelu segmentacji do usunięcia tła
+    console.log('Ładowanie modelu segmentacji...');
+    // Używamy modelu BRIA RMBG-2.0 do segmentacji 
     const segmenter = await pipeline('image-segmentation', 'briaai/RMBG-2.0', {
-      device: 'webgpu', // Użyj GPU jeśli dostępne
+      progress_callback: (progress) => {
+        console.log(`Postęp ładowania modelu: ${Math.round(progress * 100)}%`);
+      },
+      revision: 'main',
+      cache_dir: '/', // Katalog cache w przeglądarce
+      use_cache: true,
+      quantized: true, // Używaj kwantyzowanej wersji modelu (mniejsza, szybsza)
+      device: 'webgpu', // Użyj GPU jeśli dostępne, fallback do 'cpu'
     });
+    
+    console.log('Model segmentacji załadowany');
     
     // Konwertuj HTMLImageElement na canvas
     const canvas = document.createElement('canvas');
@@ -60,7 +70,9 @@ export const removeBackgroundWithAI = async (file: File): Promise<Blob> => {
     
     // Przetwórz obraz za pomocą modelu segmentacji
     console.log('Przetwarzanie przy użyciu modelu segmentacji...');
-    const result = await segmenter(imageData);
+    const result = await segmenter(imageData, {
+      threshold: 0.5,
+    });
     
     console.log('Wynik segmentacji:', result);
     
