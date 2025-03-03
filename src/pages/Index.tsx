@@ -427,18 +427,24 @@ const Index = () => {
       
       let fileName = original.name;
       if (renameFiles && baseFileName) {
-        const numericSuffix = original.name.match(/\d+(?=\.[^.]+$)/);
+        // Extract number from original filename if it exists
+        const numericSuffix = original.name.match(/\d+/);
         
         if (numericSuffix) {
-          fileName = `${baseFileName}${numericSuffix[0]}.jpg`;
-        } else if (index > 0) {
-          fileName = `${baseFileName}-${index + 1}.jpg`;
+          fileName = `${baseFileName}-${numericSuffix[0]}.jpg`;
         } else {
-          fileName = `${baseFileName}.jpg`;
+          fileName = `${baseFileName}-${index + 1}.jpg`;
         }
       } else {
+        // Still extract number from original filename if it exists
         const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
-        fileName = `${nameWithoutExt}.jpg`;
+        const numericSuffix = original.name.match(/\d+/);
+        
+        if (numericSuffix) {
+          fileName = `${nameWithoutExt}-${numericSuffix[0]}.jpg`;
+        } else {
+          fileName = `${nameWithoutExt}-${index + 1}.jpg`;
+        }
       }
       
       link.download = fileName;
@@ -471,24 +477,39 @@ const Index = () => {
         if (processed) {
           let fileName = original.name;
           if (renameFiles && baseFileName) {
-            const numericSuffix = original.name.match(/\d+(?=\.[^.]+$)/);
+            // Extract number from original filename if it exists
+            const numericSuffix = original.name.match(/\d+/);
             
             if (numericSuffix) {
-              fileName = `${baseFileName}${numericSuffix[0]}.jpg`;
-            } else if (i > 0) {
-              fileName = `${baseFileName}-${i + 1}.jpg`;
+              fileName = `${baseFileName}-${numericSuffix[0]}.jpg`;
             } else {
-              fileName = `${baseFileName}.jpg`;
+              fileName = `${baseFileName}-${i + 1}.jpg`;
             }
           } else {
+            // Still extract number from original filename if it exists
             const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
-            fileName = `${nameWithoutExt}.jpg`;
+            const numericSuffix = original.name.match(/\d+/);
+            
+            if (numericSuffix) {
+              fileName = `${nameWithoutExt}-${numericSuffix[0]}.jpg`;
+            } else {
+              fileName = `${nameWithoutExt}-${i + 1}.jpg`;
+            }
           }
           
           zip.file(fileName, processed);
         } else {
           const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
-          zip.file(`${nameWithoutExt}.jpg`, original);
+          const numericSuffix = original.name.match(/\d+/);
+          let fileName;
+          
+          if (numericSuffix) {
+            fileName = `${nameWithoutExt}-${numericSuffix[0]}.jpg`;
+          } else {
+            fileName = `${nameWithoutExt}-${i + 1}.jpg`;
+          }
+          
+          zip.file(fileName, original);
         }
         
         setProgress(Math.round(((i + 1) / totalFiles) * 50));
@@ -839,42 +860,7 @@ const Index = () => {
                             let fileName = original.name;
                             
                             if (renameFiles && baseFileName) {
-                              const numericSuffix = original.name.match(/\d+(?=\.[^.]+$)/);
+                              // Extract number from original filename if it exists
+                              const numericSuffix = original.name.match(/\d+/);
                               
-                              if (numericSuffix) {
-                                fileName = `${baseFileName}${numericSuffix[0]}.jpg`;
-                              } else if (index > 0) {
-                                fileName = `${baseFileName}-${index + 1}.jpg`;
-                              } else {
-                                fileName = `${baseFileName}.jpg`;
-                              }
-                            } else {
-                              const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
-                              fileName = `${nameWithoutExt}.jpg`;
-                            }
-                            
-                            link.href = URL.createObjectURL(processed as Blob);
-                            link.download = fileName;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            URL.revokeObjectURL(link.href);
-                            toast.success(`Downloaded: ${fileName}`);
-                          }}
-                        >
-                          Download
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default Index;
+                              if (numeric
