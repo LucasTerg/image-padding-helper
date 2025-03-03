@@ -438,10 +438,14 @@ const Index = () => {
       } else {
         // Still extract number from original filename if it exists
         const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
-        const numericSuffix = original.name.match(/\d+/);
+        const numericSuffix = nameWithoutExt.match(/(\d+)$/);
         
         if (numericSuffix) {
-          fileName = `${nameWithoutExt}-${numericSuffix[0]}.jpg`;
+          // Ensure there's a dash before the number
+          const basePart = nameWithoutExt.substring(0, nameWithoutExt.lastIndexOf(numericSuffix[0]));
+          // Remove any existing dash at the end of basePart
+          const cleanBasePart = basePart.endsWith('-') ? basePart : basePart;
+          fileName = `${cleanBasePart}-${numericSuffix[0]}.jpg`;
         } else {
           fileName = `${nameWithoutExt}-${index + 1}.jpg`;
         }
@@ -488,10 +492,14 @@ const Index = () => {
           } else {
             // Still extract number from original filename if it exists
             const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
-            const numericSuffix = original.name.match(/\d+/);
+            const numericSuffix = nameWithoutExt.match(/(\d+)$/);
             
             if (numericSuffix) {
-              fileName = `${nameWithoutExt}-${numericSuffix[0]}.jpg`;
+              // Ensure there's a dash before the number
+              const basePart = nameWithoutExt.substring(0, nameWithoutExt.lastIndexOf(numericSuffix[0]));
+              // Remove any existing dash at the end of basePart
+              const cleanBasePart = basePart.endsWith('-') ? basePart : basePart;
+              fileName = `${cleanBasePart}-${numericSuffix[0]}.jpg`;
             } else {
               fileName = `${nameWithoutExt}-${i + 1}.jpg`;
             }
@@ -500,11 +508,15 @@ const Index = () => {
           zip.file(fileName, processed);
         } else {
           const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
-          const numericSuffix = original.name.match(/\d+/);
+          const numericSuffix = nameWithoutExt.match(/(\d+)$/);
           let fileName;
           
           if (numericSuffix) {
-            fileName = `${nameWithoutExt}-${numericSuffix[0]}.jpg`;
+            // Ensure there's a dash before the number
+            const basePart = nameWithoutExt.substring(0, nameWithoutExt.lastIndexOf(numericSuffix[0]));
+            // Remove any existing dash at the end of basePart
+            const cleanBasePart = basePart.endsWith('-') ? basePart : basePart;
+            fileName = `${cleanBasePart}-${numericSuffix[0]}.jpg`;
           } else {
             fileName = `${nameWithoutExt}-${i + 1}.jpg`;
           }
@@ -863,4 +875,47 @@ const Index = () => {
                               // Extract number from original filename if it exists
                               const numericSuffix = original.name.match(/\d+/);
                               
-                              if (numeric
+                              if (numericSuffix) {
+                                fileName = `${baseFileName}-${numericSuffix[0]}.jpg`;
+                              } else {
+                                fileName = `${baseFileName}-${index + 1}.jpg`;
+                              }
+                            } else {
+                              // Still extract number from original filename if it exists
+                              const nameWithoutExt = original.name.substring(0, original.name.lastIndexOf('.'));
+                              const numericSuffix = nameWithoutExt.match(/(\d+)$/);
+                              
+                              if (numericSuffix) {
+                                // Ensure there's a dash before the number
+                                const basePart = nameWithoutExt.substring(0, nameWithoutExt.lastIndexOf(numericSuffix[0]));
+                                // Remove any existing dash at the end of basePart
+                                const cleanBasePart = basePart.endsWith('-') ? basePart : basePart;
+                                fileName = `${cleanBasePart}-${numericSuffix[0]}.jpg`;
+                              } else {
+                                fileName = `${nameWithoutExt}-${index + 1}.jpg`;
+                              }
+                            }
+                            
+                            link.download = fileName;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(link.href);
+                          }}
+                        >
+                          Download
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Index;
