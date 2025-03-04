@@ -42,12 +42,11 @@ export const removeBackgroundWithAI = async (file: File): Promise<Blob> => {
     console.log('Ładowanie modelu segmentacji...');
     // Używamy modelu BRIA RMBG-2.0 do segmentacji 
     const segmenter = await pipeline('image-segmentation', 'briaai/RMBG-2.0', {
-      progress_callback: (progress) => {
+      progress_callback: (progress: number) => {
         console.log(`Postęp ładowania modelu: ${Math.round(progress * 100)}%`);
       },
       revision: 'main',
       cache_dir: '/', // Katalog cache w przeglądarce
-      use_cache: true,
       quantized: true, // Używaj kwantyzowanej wersji modelu (mniejsza, szybsza)
       device: 'webgpu', // Użyj GPU jeśli dostępne, fallback do 'cpu'
     });
