@@ -42,12 +42,11 @@ export const removeBackgroundWithAI = async (file: File): Promise<Blob> => {
     console.log('Ładowanie modelu segmentacji...');
     // Używamy modelu BRIA RMBG-2.0 do segmentacji 
     const segmenter = await pipeline('image-segmentation', 'briaai/RMBG-2.0', {
-      progress_callback: (progressInfo) => {
+      progress_callback: (progressInfo: any) => {
         console.log(`Postęp ładowania modelu: ${Math.round(progressInfo.progress * 100)}%`);
       },
       revision: 'main',
       cache_dir: '/', // Katalog cache w przeglądarce
-      quantized: true, // Używaj kwantyzowanej wersji modelu (mniejsza, szybsza)
       device: 'webgpu', // Użyj GPU jeśli dostępne, fallback do 'cpu'
     });
     
@@ -108,9 +107,66 @@ export const removeBackgroundWithAI = async (file: File): Promise<Blob> => {
     outputCtx.putImageData(outputImageData, 0, 0);
     console.log('Maska zastosowana pomyślnie');
     
+    // Znajdź granice obiektu, aby go wykadrować (usunąć białe tło)
+    const imageWithAlpha = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+    const dataWithAlpha = imageWithAlpha.data;
+    
+    let minX = outputCanvas.width;
+    let minY = outputCanvas.height;
+    let maxX = 0;
+    let maxY = 0;
+    
+    // Szukamy granic obiektu (piksele z nieprzezroczystością > 0)
+    for (let y = 0; y < outputCanvas.height; y++) {
+      for (let x = 0; x < outputCanvas.width; x++) {
+        const idx = (y * outputCanvas.width + x) * 4;
+        if (dataWithAlpha[idx + 3] > 10) { // Jeśli piksel ma jakąkolwiek nieprzezroczystość
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+    
+    // Dodaj margines wokół wykrytego obiektu
+    const padding = 10;
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX = Math.min(outputCanvas.width, maxX + padding);
+    maxY = Math.min(outputCanvas.height, maxY + padding);
+    
+    // Sprawdź, czy znaleziono granice obiektu
+    if (maxX - minX <= 0 || maxY - minY <= 0) {
+      console.log('Nie znaleziono obiektu do wykadrowania, używam całego obrazu');
+      minX = 0;
+      minY = 0;
+      maxX = outputCanvas.width;
+      maxY = outputCanvas.height;
+    }
+    
+    // Utwórz nowy canvas tylko dla wykadrowanego obiektu
+    const croppedCanvas = document.createElement('canvas');
+    const cropWidth = maxX - minX;
+    const cropHeight = maxY - minY;
+    croppedCanvas.width = cropWidth;
+    croppedCanvas.height = cropHeight;
+    const croppedCtx = croppedCanvas.getContext('2d');
+    
+    if (!croppedCtx) throw new Error('Nie udało się uzyskać kontekstu przyciętego canvas');
+    
+    // Narysuj tylko wykadrowany obszar na nowym canvas
+    croppedCtx.drawImage(
+      outputCanvas,
+      minX, minY, cropWidth, cropHeight,
+      0, 0, cropWidth, cropHeight
+    );
+    
+    console.log(`Obraz wykadrowany do: ${cropWidth}x${cropHeight}px`);
+    
     // Konwertuj canvas na blob
     return new Promise((resolve, reject) => {
-      outputCanvas.toBlob(
+      croppedCanvas.toBlob(
         (blob) => {
           if (blob) {
             console.log('Pomyślnie utworzono końcowy blob');
