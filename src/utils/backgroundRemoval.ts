@@ -1,4 +1,3 @@
-
 import { pipeline, env } from '@huggingface/transformers';
 
 // Konfiguracja transformers.js aby zawsze pobierał modele
@@ -40,8 +39,8 @@ export const removeBackgroundWithAI = async (file: File): Promise<Blob> => {
     const imageElement = await loadImage(file);
     
     console.log('Ładowanie modelu segmentacji...');
-    // Używamy modelu BRIA RMBG-2.0 do segmentacji 
-    const segmenter = await pipeline('image-segmentation', 'briaai/RMBG-2.0', {
+    // Używamy modelu segmentacji, który jest poprawnie obsługiwany
+    const segmenter = await pipeline('image-segmentation', 'Xenova/segformer-b0-finetuned-ade-512-512', {
       progress_callback: (progressInfo: any) => {
         console.log(`Postęp ładowania modelu: ${Math.round(progressInfo.progress * 100)}%`);
       },
@@ -68,9 +67,7 @@ export const removeBackgroundWithAI = async (file: File): Promise<Blob> => {
     
     // Przetwórz obraz za pomocą modelu segmentacji
     console.log('Przetwarzanie przy użyciu modelu segmentacji...');
-    const result = await segmenter(imageData, {
-      threshold: 0.5,
-    });
+    const result = await segmenter(imageData);
     
     console.log('Wynik segmentacji:', result);
     
